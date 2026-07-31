@@ -53,3 +53,5 @@ venv/
 ml/dataset/
 ml/datasets/
 ml/data/
+src/lib/model_weights.json
+
