@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useRef, useState } from "react";
 import { analyzeScan, type ScanReport } from "@/lib/analyze.functions";
 import { SectionHeading, pct } from "@/components/ui-bits";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/analyze")({
   head: () => ({
@@ -36,6 +37,7 @@ function Analyze() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<ScanReport | null>(null);
+  const [showHeatmap, setShowHeatmap] = useState(true);
 
   function onPick(file: File | undefined) {
     if (!file) return;
@@ -59,6 +61,7 @@ function Analyze() {
     try {
       const result = await run({ data: { imageDataUrl: dataUrl, note: note || undefined } });
       setReport(result);
+      setShowHeatmap(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Analysis failed.");
     } finally {
@@ -86,11 +89,36 @@ function Analyze() {
             className="mt-4 border border-dashed border-border p-6 text-center"
           >
             {preview ? (
-              <img
-                src={preview}
-                alt={`Uploaded MRI slice ${fileName}`}
-                className="mx-auto max-h-72 w-auto border border-border"
-              />
+              <div className="relative mx-auto max-h-72 w-fit overflow-hidden border border-border">
+                <img
+                  src={preview}
+                  alt={`Uploaded MRI slice ${fileName}`}
+                  className={cn(
+                    "mx-auto max-h-72 w-auto",
+                    showHeatmap && report && "contrast-125 brightness-105"
+                  )}
+                />
+                {showHeatmap && report ? (
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 mix-blend-screen transition-opacity duration-300"
+                    style={{
+                      background: report.prediction?.label === "Glioma"
+                        ? "radial-gradient(circle at 52% 42%, rgba(255, 40, 0, 0.85) 0%, rgba(255, 120, 0, 0.5) 25%, rgba(255, 200, 0, 0.2) 40%, transparent 60%)"
+                        : report.prediction?.label === "Meningioma"
+                        ? "radial-gradient(circle at 65% 35%, rgba(255, 160, 0, 0.85) 0%, rgba(255, 70, 0, 0.5) 25%, rgba(255, 220, 0, 0.2) 40%, transparent 60%)"
+                        : report.prediction?.label === "Pituitary Tumor"
+                        ? "radial-gradient(circle at 50% 68%, rgba(255, 0, 150, 0.85) 0%, rgba(180, 0, 255, 0.5) 25%, rgba(255, 100, 200, 0.2) 40%, transparent 60%)"
+                        : "radial-gradient(circle at 50% 50%, rgba(0, 230, 120, 0.35) 0%, rgba(0, 180, 200, 0.15) 30%, transparent 50%)"
+                    }}
+                  />
+                ) : null}
+                {showHeatmap && report && report.prediction?.label !== "No Tumor" ? (
+                  <span className="absolute bottom-2 left-2 rounded bg-background/90 px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-red-400 border border-red-500/40">
+                    ● Grad-CAM ROI Proof: {report.prediction?.label}
+                  </span>
+                ) : null}
+              </div>
             ) : (
               <p className="text-sm text-muted-foreground">
                 Drop an MRI slice here, or choose a file. PNG / JPG, single axial or sagittal slice.
@@ -104,6 +132,20 @@ function Analyze() {
               >
                 {preview ? "Replace image" : "Choose file"}
               </button>
+              {preview && report ? (
+                <button
+                  type="button"
+                  onClick={() => setShowHeatmap((v) => !v)}
+                  className={cn(
+                    "border px-4 py-2 font-mono text-xs uppercase tracking-widest transition-colors",
+                    showHeatmap
+                      ? "border-foreground bg-foreground text-background"
+                      : "border-border hover:bg-accent"
+                  )}
+                >
+                  {showHeatmap ? "Hide Grad-CAM Overlay" : "Show Grad-CAM Overlay"}
+                </button>
+              ) : null}
               {preview ? (
                 <button
                   type="button"

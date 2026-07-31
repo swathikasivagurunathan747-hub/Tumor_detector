@@ -20,6 +20,10 @@ export const analyzeScan = createServerFn({ method: "POST" })
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data),
       });
     } catch {
+      const isProduction = process.env.NODE_ENV === "production" || Boolean(process.env.ML_API_URL);
+      if (isProduction) {
+        throw new Error("Q-Flux ML analysis service is currently unavailable. Please try again later.");
+      }
       throw new Error("Q-Flux ML backend is not running. Start it with: python -m uvicorn ml.api:app --port 8000");
     }
     if (!res.ok) {
