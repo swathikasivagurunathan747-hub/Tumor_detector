@@ -11,9 +11,9 @@ export type ScanReport = {
 };
 
 export const analyzeScan = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => Input.parse(input))
+  .validator((input: unknown) => Input.parse(input))
   .handler(async ({ data }): Promise<ScanReport> => {
-    const api = process.env.QFLUX_ML_API ?? "http://127.0.0.1:8000";
+    const api = process.env.ML_API_URL ?? process.env.QFLUX_ML_API ?? "http://127.0.0.1:8000";
     let res: Response;
     try {
       res = await fetch(`${api}/predict`, {
